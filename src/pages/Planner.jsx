@@ -1,7 +1,10 @@
 import Navbar from "../components/Navbar"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 function Planner() {
+
+  const navigate = useNavigate()
 
   const [formData, setFormData] = useState({
     destination: "",
@@ -21,17 +24,21 @@ function Planner() {
     e.preventDefault()
 
     console.log(formData)
+
+navigate("/result", {
+  state: formData
+})
   }
 
   return (
     <>
       <Navbar />
 
-      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-100 flex justify-center items-center p-5">
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white p-8 rounded-xl shadow-lg w-[400px]"
+          className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md"
         >
 
           <h1 className="text-3xl font-bold mb-6 text-center">
@@ -42,6 +49,7 @@ function Planner() {
             type="text"
             name="destination"
             placeholder="Destination"
+            value={formData.destination}
             onChange={handleChange}
             className="w-full p-3 border rounded-lg mb-4"
           />
@@ -50,6 +58,7 @@ function Planner() {
             type="number"
             name="budget"
             placeholder="Budget"
+            value={formData.budget}
             onChange={handleChange}
             className="w-full p-3 border rounded-lg mb-4"
           />
@@ -58,25 +67,43 @@ function Planner() {
             type="number"
             name="days"
             placeholder="Number of Days"
+            value={formData.days}
             onChange={handleChange}
             className="w-full p-3 border rounded-lg mb-4"
           />
 
           <select
             name="interest"
+            value={formData.interest}
             onChange={handleChange}
             className="w-full p-3 border rounded-lg mb-6"
           >
-            <option value="">Select Interest</option>
-            <option value="Adventure">Adventure</option>
-            <option value="Nature">Nature</option>
-            <option value="Food">Food</option>
-            <option value="Beach">Beach</option>
+
+            <option value="">
+              Select Interest
+            </option>
+
+            <option value="Adventure">
+              Adventure
+            </option>
+
+            <option value="Nature">
+              Nature
+            </option>
+
+            <option value="Food">
+              Food
+            </option>
+
+            <option value="Beach">
+              Beach
+            </option>
+
           </select>
 
           <button
             type="submit"
-            className="w-full bg-black text-white p-3 rounded-lg hover:bg-gray-800"
+            className="w-full bg-black text-white p-3 rounded-lg hover:bg-gray-800 transition"
           >
             Generate Trip
           </button>
