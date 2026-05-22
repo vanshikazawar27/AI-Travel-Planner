@@ -1,6 +1,7 @@
 import Navbar from "../components/Navbar"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import API from "../services/api"
 
 function Planner() {
 
@@ -20,15 +21,33 @@ function Planner() {
     })
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+const handleSubmit = async (e) => {
 
-    console.log(formData)
+  e.preventDefault()
 
-navigate("/result", {
-  state: formData
-})
+  try {
+
+    const response = await API.post(
+      "/trip/generate-trip",
+      formData
+    )
+
+    navigate("/result", {
+      state: {
+        formData,
+        tripPlan: response.data.tripPlan
+      }
+    })
+
+  } catch (error) {
+
+    console.log(error)
+
+    alert("Failed to generate trip")
+
   }
+
+}
 
   return (
     <>
