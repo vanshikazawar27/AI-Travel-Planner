@@ -1,22 +1,28 @@
-const express = require("express")
-const OpenAI = require("openai")
+const express = require('express');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const router = express.Router()
+const router = express.Router();
 
-const client = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
-})
+// Lazy client init so auth/group/expense features can run even if trip keys are missing.
+let client = null;
+function getClient() {
+  if (client) return client;
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
 
-if (!process.env.OPENROUTER_API_KEY) {
-  console.warn(
-    "[backend] Missing OPENROUTER_API_KEY. Trip generation will fail.",
-  )
+  client = new GoogleGenerativeAI(apiKey);
+  return client;
 }
 
-router.post("/generate-trip", async (req, res) => {
-
+router.post('/generate-trip', async (req, res) => {
   try {
+    const genAI = getClient();
+    if (!genAI) {
+      return res.status(500).json({
+        error:
+          'Missing API credentials. Set GOOGLE_API_KEY in backend/.env',
+      });
+    }
 
     const {
       destination,
@@ -51,21 +57,9 @@ TRAVEL TIPS:
 Be specific with real place names, real restaurants, real hotels, and accurate cost estimates in Indian Rupees.
 `
 
-    // Use a model that is commonly available on OpenRouter.
-    // If your account has a different allowed model, change it here.
-    const completion = await client.chat.completions.create({
-      model: "google/gemma-2-9b-it",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: 2000,
-    })
-
-    const tripPlan =
-      completion.choices[0].message.content
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const tripPlan = result.response.text();
 
     res.json({
       tripPlan
