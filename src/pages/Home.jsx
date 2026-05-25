@@ -4,7 +4,10 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, Sparkles, Search, MapPin, Star, Zap, Clock, Shield } from "lucide-react"
 
 import Navbar from "../components/Navbar"
-import heroImg from "../assets/hero.png"
+import heroImg from "../assets/hero.png";
+import andamanImg from "../assets/andaman.png";
+import coorgImg from "../assets/coorg.png";
+import mysoreImg from "../assets/mysore.png"
 import DestinationCard from "../components/ui/DestinationCard"
 import GlassCard from "../components/ui/GlassCard"
 
@@ -110,7 +113,7 @@ const ALL_DESTINATIONS = [
     duration: "5–7 days",
     category: "Beach",
     trending: false,
-    image: "https://images.unsplash.com/photo-1586861203927-800a5acdce4d?auto=format&fit=crop&w=800&q=80",
+    image: andamanImg,
   },
   {
     name: "Rishikesh",
@@ -140,7 +143,7 @@ const ALL_DESTINATIONS = [
     duration: "3–4 days",
     category: "Nature",
     trending: false,
-    image: "https://images.unsplash.com/photo-1590766740645-c53a8b9e2754?auto=format&fit=crop&w=800&q=80",
+    image: coorgImg,
   },
   {
     name: "Mumbai",
@@ -160,7 +163,7 @@ const ALL_DESTINATIONS = [
     duration: "2–4 days",
     category: "Heritage",
     trending: false,
-    image: "https://images.unsplash.com/photo-1580867839039-6ee7a16ee31f?auto=format&fit=crop&w=800&q=80",
+    image: mysoreImg,
   },
 ]
 
