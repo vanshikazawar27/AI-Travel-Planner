@@ -1,28 +1,24 @@
-const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const express = require("express")
+const OpenAI = require("openai")
 
-const router = express.Router();
+const router = express.Router()
 
-// Lazy client init so auth/group/expense features can run even if trip keys are missing.
-let client = null;
-function getClient() {
-  if (client) return client;
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
+const client = new OpenAI({
 
-  client = new GoogleGenerativeAI(apiKey);
-  return client;
-}
+  apiKey: process.env.OPENROUTER_API_KEY,
 
-router.post('/generate-trip', async (req, res) => {
+  baseURL: "https://openrouter.ai/api/v1",
+
+  defaultHeaders: {
+    "HTTP-Referer": "http://localhost:5173",
+    "X-Title": "AI Travel Planner"
+  }
+
+})
+
+router.post("/generate-trip", async (req, res) => {
+
   try {
-    const genAI = getClient();
-    if (!genAI) {
-      return res.status(500).json({
-        error:
-          'Missing API credentials. Set GOOGLE_API_KEY in backend/.env',
-      });
-    }
 
     const {
       destination,
@@ -32,34 +28,37 @@ router.post('/generate-trip', async (req, res) => {
     } = req.body
 
     const prompt = `
-You are an expert travel planner. Generate a detailed ${days}-day travel itinerary for ${destination}, India.
+Generate a detailed ${days}-day travel itinerary for ${destination}.
 
 Budget: ₹${budget}
-Travel Style: ${interest}
 
-Format each day EXACTLY like this:
-Day 1: [Theme for the day]
-Morning: [Activity + details]
-Afternoon: [Activity + details]
-Evening: [Activity + details]
-Food: [Restaurant/dish recommendations]
-Hotel: [Recommended stay + approx cost]
-Estimated Spend: ₹[amount]
+Interest: ${interest}
 
-Day 2: ...
-
-At the end, add:
-TRAVEL TIPS:
-- [tip 1]
-- [tip 2]
-- [tip 3]
-
-Be specific with real place names, real restaurants, real hotels, and accurate cost estimates in Indian Rupees.
+Include:
+- day-wise itinerary
+- places to visit
+- hotel suggestions
+- food recommendations
+- travel tips
+- estimated expenses
 `
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const tripPlan = result.response.text();
+    const completion =
+      await client.chat.completions.create({
+
+        model: "meta-llama/llama-3-8b-instruct",
+
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+
+      })
+
+    const tripPlan =
+      completion.choices[0].message.content
 
     res.json({
       tripPlan
