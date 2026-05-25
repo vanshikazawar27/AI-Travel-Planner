@@ -11,13 +11,21 @@ import { downloadText } from "../utils/downloadText"
 function Result() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [copied, setCopied] = useState(false);
 
   const { formData, tripPlan } = location.state || {}
 
-  const { days, raw } = useMemo(() => parseTripPlan(tripPlan), [tripPlan])
-  const [copied, setCopied] = useState(false)
+  // Determine if the API returned a structured itinerary (object) or plain text
+  const { days, raw } = useMemo(() => {
+    // If the response is an object with an 'itinerary' field, use it directly
+    if (tripPlan && typeof tripPlan === 'object' && Array.isArray(tripPlan.itinerary)) {
+      return { days: tripPlan.itinerary, raw: '' }
+    }
+    // Otherwise fall back to parsing the raw string output
+    return parseTripPlan(tripPlan)
+  }, [tripPlan])
 
-  const itineraryText = raw || tripPlan || ""
+  const itineraryText = raw || (typeof tripPlan === 'string' ? tripPlan : '')
 
   const handleCopy = async () => {
     try {

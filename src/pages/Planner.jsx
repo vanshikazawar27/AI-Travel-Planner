@@ -63,7 +63,7 @@ function Planner() {
       navigate("/result", {
         state: {
           formData,
-          tripPlan: response?.data?.tripPlan ?? "",
+          tripPlan: response?.data ?? {},
         },
       })
     } catch (error) {
