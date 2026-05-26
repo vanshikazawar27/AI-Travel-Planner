@@ -84,7 +84,7 @@ Include:
       let index = 0;
       raw.replace(dayRegex, (_, d) => {
         const content = parts[index] ? parts[index].trim() : '';
-        daySections.push({ day: Number(d), details: content });
+        daySections.push({ day: Number(d), content: content });
         index++;
         return '';
       });
@@ -94,6 +94,7 @@ Include:
 
     res.json({
       tripPlan,
+      raw: tripPlan,
       itinerary: daySections
     });
 

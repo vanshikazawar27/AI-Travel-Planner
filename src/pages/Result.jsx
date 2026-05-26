@@ -13,19 +13,22 @@ function Result() {
   const location = useLocation()
   const [copied, setCopied] = useState(false);
 
-  const { formData, tripPlan } = location.state || {}
+  const { formData, tripPlan } = location.state || {};
 
-  // Determine if the API returned a structured itinerary (object) or plain text
-  const { days, raw } = useMemo(() => {
-    // If the response is an object with an 'itinerary' field, use it directly
-    if (tripPlan && typeof tripPlan === 'object' && Array.isArray(tripPlan.itinerary)) {
-      return { days: tripPlan.itinerary, raw: '' }
+  // Extract structured data if available
+  const { itinerary = [], raw = '' } = tripPlan || {};
+
+  // Determine days and raw itinerary text
+  const { days, raw: parsedRaw } = useMemo(() => {
+    // If backend provided an array of day sections
+    if (Array.isArray(itinerary) && itinerary.length) {
+      return { days: itinerary, raw: raw };
     }
-    // Otherwise fall back to parsing the raw string output
-    return parseTripPlan(tripPlan)
-  }, [tripPlan])
+    // Fallback to parsing the raw string output
+    return parseTripPlan(tripPlan);
+  }, [itinerary, tripPlan, raw]);
 
-  const itineraryText = raw || (typeof tripPlan === 'string' ? tripPlan : '')
+  const itineraryText = parsedRaw || (typeof tripPlan === 'string' ? tripPlan : '');
 
   const handleCopy = async () => {
     try {
@@ -172,7 +175,7 @@ function Result() {
                       </div>
                     </div>
                     <div className="mt-3 whitespace-pre-wrap text-white/80 leading-relaxed text-sm">
-                      {d.content}
+                        {d.details || d.content}
                     </div>
                   </div>
                 </GlassCard>
