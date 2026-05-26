@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { ArrowLeft, Download, Copy, Check } from "lucide-react"
+import { ArrowLeft, Download, Copy, Check, Bed, ForkKnife, DollarSign, MapPin, Info } from "lucide-react"
 
 import Navbar from "../components/Navbar"
 import GlassCard from "../components/ui/GlassCard"
@@ -12,23 +12,127 @@ function Result() {
   const navigate = useNavigate()
   const location = useLocation()
   const [copied, setCopied] = useState(false);
+  const [expandedDays, setExpandedDays] = useState({});
 
-  const { formData, tripPlan } = location.state || {};
+  const locState = location.state || (typeof window !== 'undefined' && window.__INJECTED_TRIP__) || (typeof window !== 'undefined' && window.localStorage && (() => { try { return JSON.parse(window.localStorage.getItem('injectedTrip') || 'null') } catch { return null } })()) || {};
+  const { formData, tripPlan } = locState || {};
 
   // Extract structured data if available
-  const { itinerary = [], raw = '' } = tripPlan || {};
+  const { itinerary = [], raw = '', destinationIntro: apiDestinationIntro = null, metadata: apiMetadata = '' } = tripPlan || {};
+
+  const formatDayText = (text) => {
+    const cleaned = (text ?? "")
+      .replace(/\*\*/g, "")
+      .replace(/\*\s*/g, "• ")
+      .replace(/\n{2,}/g, "\n")
+      .trim()
+
+    const lines = cleaned
+      .split(/\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+
+    return lines.join("\n")
+  }
+
+  const getDayDisplay = (day) => {
+    const fullText = formatDayText(day.content || day.details || "")
+    const lines = fullText.split(/\n/)
+    const isLong = lines.length > 7 || fullText.length > 320
+
+    if (expandedDays[day.day] || !isLong) {
+      return {
+        text: fullText,
+        truncated: false,
+      }
+    }
+
+    const truncatedText = lines.slice(0, 7).join("\n")
+    return {
+      text: truncatedText,
+      truncated: true,
+    }
+  }
+
+  const toggleDayExpanded = (dayNumber) => {
+    setExpandedDays((prev) => ({
+      ...prev,
+      [dayNumber]: !prev[dayNumber],
+    }))
+  }
 
   // Determine days and raw itinerary text
-  const { days, raw: parsedRaw } = useMemo(() => {
-    // If backend provided an array of day sections
-    if (Array.isArray(itinerary) && itinerary.length) {
-      return { days: itinerary, raw: raw };
-    }
-    // Fallback to parsing the raw string output
-    return parseTripPlan(tripPlan);
-  }, [itinerary, tripPlan, raw]);
+  const { days, raw: parsedRaw, destinationIntro: parsedDestinationIntro = null, metadata: parsedMetadata = "" } = useMemo(() => {
+    const parsedFromRaw = typeof raw === "string" ? parseTripPlan(raw) : { days: [], metadata: "", destinationIntro: null }
 
+    if (parsedFromRaw.days.length > 0) {
+      return {
+        days: parsedFromRaw.days,
+        raw: raw,
+        metadata: parsedFromRaw.metadata || apiMetadata || "",
+        destinationIntro: parsedFromRaw.destinationIntro || apiDestinationIntro,
+      }
+    }
+
+    if (Array.isArray(itinerary) && itinerary.length) {
+      return {
+        days: itinerary,
+        raw: raw,
+        metadata: apiMetadata || parsedFromRaw.metadata || "",
+        destinationIntro: apiDestinationIntro,
+      }
+    }
+
+    return parseTripPlan(tripPlan);
+  }, [itinerary, tripPlan, raw, apiDestinationIntro]);
+
+  const destinationIntro = apiDestinationIntro || parsedDestinationIntro;
   const itineraryText = parsedRaw || (typeof tripPlan === 'string' ? tripPlan : '');
+  const metadata = parsedMetadata || apiMetadata || '';
+
+  const metadataSections = useMemo(() => {
+    if (!metadata) return []
+
+    const lines = metadata
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+
+    const headingRegex = /^(Hotel Suggestions|Hotels|Food Recommendations|Food Recommendation|Travel Tips|Budget Breakdown|Estimated Expenses|Total estimated expenses|Budget):?$/i
+    const sections = []
+    let current = { title: null, lines: [] }
+
+    for (const line of lines) {
+      const match = line.match(headingRegex)
+      if (match) {
+        if (current.title || current.lines.length) {
+          sections.push(current)
+        }
+        current = { title: match[1], lines: [] }
+        continue
+      }
+      current.lines.push(line)
+    }
+
+    if (current.title || current.lines.length) {
+      sections.push(current)
+    }
+
+    return sections
+  }, [metadata])
+
+  const metadataIconMap = {
+    "Hotel Suggestions": Bed,
+    Hotels: Bed,
+    "Food Recommendations": ForkKnife,
+    "Food Recommendation": ForkKnife,
+    "Travel Tips": MapPin,
+    "Budget Breakdown": DollarSign,
+    "Estimated Expenses": DollarSign,
+    "Total estimated expenses": DollarSign,
+    Budget: DollarSign,
+    default: Info,
+  }
 
   const handleCopy = async () => {
     try {
@@ -158,29 +262,104 @@ function Result() {
             </button>
           </div>
 
-          {days.length > 0 ? (
-            days.map((d) => (
-              <motion.div
-                key={d.day}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
-              >
-                <GlassCard hoverLift={false}>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <h3 className="text-xl font-bold">Day {d.day}</h3>
-                      <div className="text-xs text-white/60 rounded-full bg-white/10 ring-1 ring-white/10 px-3 py-1">
-                        Plan
-                      </div>
-                    </div>
-                    <div className="mt-3 whitespace-pre-wrap text-white/80 leading-relaxed text-sm">
-                        {d.details || d.content}
+          {destinationIntro && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+            >
+              <GlassCard hoverLift={false}>
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className="text-xl font-bold">Destination</h3>
+                    <div className="text-xs text-white/60 rounded-full bg-white/10 ring-1 ring-white/10 px-3 py-1">
+                      Info
                     </div>
                   </div>
-                </GlassCard>
-              </motion.div>
-            ))
+                  <div className="mt-3 whitespace-pre-wrap text-white/80 leading-relaxed text-sm">
+                    {formData.destination}
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+          )}
+          {days.length > 0 ? (
+            <>
+              {days.map((d, index) => {
+                const display = getDayDisplay(d)
+                return (
+                  <motion.div
+                    key={`day-${d.day}-${index}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35 }}
+                  >
+                    <GlassCard hoverLift={false}>
+                      <div className="p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <h3 className="text-xl font-bold">Day {d.day}</h3>
+                          <div className="text-xs text-white/60 rounded-full bg-white/10 ring-1 ring-white/10 px-3 py-1">
+                            Plan
+                          </div>
+                        </div>
+                        <div className="mt-3 whitespace-pre-wrap text-white/80 leading-relaxed text-sm">
+                          {display.text}
+                        </div>
+                        {display.truncated && (
+                          <button
+                            onClick={() => toggleDayExpanded(d.day)}
+                            className="mt-3 text-sm font-semibold text-yellow-300 hover:text-yellow-200"
+                          >
+                            {expandedDays[d.day] ? "Show less" : "Read more"}
+                          </button>
+                        )}
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                )
+              })}
+
+              {metadata && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <GlassCard hoverLift={false}>
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <h3 className="text-xl font-bold">Extra recommendations</h3>
+                        <div className="text-xs text-white/60 rounded-full bg-white/10 ring-1 ring-white/10 px-3 py-1">
+                          Extras
+                        </div>
+                      </div>
+                      <div className="mt-3 space-y-6 text-white/80 leading-relaxed text-sm">
+                        {metadataSections.map((section, sectionIndex) => {
+                          const Icon = metadataIconMap[section.title] || metadataIconMap.default
+                          return (
+                            <div key={`metadata-section-${sectionIndex}`}>
+                              {section.title && (
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Icon className="w-4 h-4 text-yellow-300" />
+                                  <h4 className="text-base font-semibold text-white">{section.title}</h4>
+                                </div>
+                              )}
+                              <div className="space-y-2">
+                                {section.lines.map((line, lineIndex) => (
+                                  <p key={`metadata-line-${sectionIndex}-${lineIndex}`} className="text-sm text-white/80">
+                                    {line}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </GlassCard>
+                </motion.div>
+              )}
+            </>
           ) : (
             <GlassCard hoverLift={false}>
               <div className="p-6">

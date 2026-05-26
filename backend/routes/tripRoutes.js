@@ -35,13 +35,15 @@ Budget: ₹${budget}
 
 Interest: ${interest}
 
-Include:
-- day-wise itinerary
-- places to visit
-- hotel suggestions
-- food recommendations
-- travel tips
-- estimated expenses
+Return only plain text in the following format:
+Day 1: <short day summary and food + hotel recommendations>
+Day 2: <short day summary and food + hotel recommendations>
+Day 3: <short day summary and food + hotel recommendations>
+
+- Do not include any repeated summaries or rewritten versions.
+- Do not include additional explanation after the final day.
+- Keep each day concise and avoid long multi-paragraph prose.
+- Use simple sentences and bullet-style items if needed.
 `
 
     const completion =
@@ -59,43 +61,117 @@ Include:
       })
 
     const rawPlan = completion.choices[0].message.content;
-    // Simple deduplication: remove identical consecutive lines
-    const lines = rawPlan.split(/\r?\n/);
-    const uniqueLines = [];
-    const seen = new Set();
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed && !seen.has(trimmed)) {
-        uniqueLines.push(line);
-        seen.add(trimmed);
+    const normalizedPlan = rawPlan
+      .replace(/\*\*/g, "")
+      .replace(/^\s*\*\s*/gm, "* ")
+      .replace(/\n{2,}/g, "\n")
+      .trim();
+
+    const tripPlan = normalizedPlan
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line, index, arr) => line.length > 0 || (index > 0 && line !== arr[index - 1]))
+      .join("\n")
+
+    const isMetadataHeading = (line) => {
+      return /^(?:[\*\-•]\s*)?\s*(?:hotels?|hotel suggestions?|accommodation|stay|lodging|food recommendations?|food recommendation|dining|restaurant|meal|travel tips?|tips|estimated expenses?|estimated expense|budget breakdown|total estimated expenses?|costs?|expenses?|budget):?/i.test(line)
+    }
+
+    const extractContentAndMetadata = (text) => {
+      const lines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+
+      const contentLines = []
+      const metadataLines = []
+      let collectingMetadata = false
+
+      for (const line of lines) {
+        if (!collectingMetadata && isMetadataHeading(line)) {
+          collectingMetadata = true
+        }
+
+        if (collectingMetadata) {
+          metadataLines.push(line)
+        } else {
+          contentLines.push(line)
+        }
+      }
+
+      return {
+        content: contentLines.join("\n").trim(),
+        metadata: metadataLines.join("\n").trim(),
       }
     }
-    const tripPlan = uniqueLines.join('\n');
 
-    // Split the cleaned plan into day sections ("Day X:")
     const daySections = [];
-    const dayRegex = /Day\s+(\d+):/gi;
+    const dayBlockRegex = /(?:^|\n)[\s\*\-]*Day\s+(\d+):([\s\S]*?)(?=(?:\n[\s\*\-]*Day\s+\d+:)|$)/gi;
     let match;
-    const raw = `\n${tripPlan}\n`;
-    const parts = raw.split(/Day\s+\d+:/i).filter(p => p.trim().length > 0);
-    // If we detect explicit day headings, capture them; otherwise fallback to single block
-    if (parts.length > 0) {
-      // Re-add the headings by scanning again
-      let index = 0;
-      raw.replace(dayRegex, (_, d) => {
-        const content = parts[index] ? parts[index].trim() : '';
-        daySections.push({ day: Number(d), content: content });
-        index++;
-        return '';
-      });
-    } else {
-      daySections.push({ day: 1, details: tripPlan.trim() });
+
+    while ((match = dayBlockRegex.exec(tripPlan)) !== null) {
+      const dayNumber = Number(match[1]);
+      const rawContent = match[2].trim().replace(/^[\s\*\-:]*/g, "");
+      const { content, metadata } = extractContentAndMetadata(rawContent)
+      daySections.push({ day: dayNumber, content, metadata });
     }
+
+    if (daySections.length === 0) {
+      daySections.push({ day: 1, content: tripPlan.trim(), metadata: "" });
+    }
+
+    const uniqueSections = Array.from(
+      daySections.reduce((map, section) => {
+        if (!map.has(section.day)) {
+          map.set(section.day, section);
+        }
+        return map;
+      }, new Map()).values()
+    ).sort((a, b) => a.day - b.day);
+
+    const introSignals = [
+      /given your interest/i,
+      /land of/i,
+      /travel itinerary/i,
+      /curated a/i,
+      /get ready/i,
+      /best culinary/i,
+      /welcome to/i,
+      /within a budget/i
+    ];
+
+    const isIntro = (text) => {
+      const normalized = text.toLowerCase();
+      const introCount = introSignals.reduce(
+        (count, regex) => count + (regex.test(normalized) ? 1 : 0),
+        0
+      );
+      return introCount > 0 && text.split(/\n/).length < 5;
+    };
+
+    let destinationIntro = null;
+    let finalSections = uniqueSections;
+
+    if (uniqueSections.length > 1 && isIntro(uniqueSections[0].content)) {
+      destinationIntro = uniqueSections[0].content;
+      finalSections = uniqueSections.slice(1).map((section, index) => ({
+        ...section,
+        day: index + 1,
+      }));
+    }
+
+    const metadata = finalSections
+      .map((section) => section.metadata || "")
+      .filter(Boolean)
+      .join("\n")
+      .trim();
 
     res.json({
       tripPlan,
       raw: tripPlan,
-      itinerary: daySections
+      itinerary: finalSections,
+      destinationIntro,
+      metadata,
     });
 
   } catch (error) {
