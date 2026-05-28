@@ -1,18 +1,23 @@
 import { useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { ArrowLeft, Download, Copy, Check, Bed, ForkKnife, DollarSign, MapPin, Info } from "lucide-react"
+import { ArrowLeft, Download, Copy, Check, Bed, ForkKnife, DollarSign, MapPin, Info, BookmarkPlus } from "lucide-react"
 
 import Navbar from "../components/Navbar"
 import GlassCard from "../components/ui/GlassCard"
 import { parseTripPlan } from "../utils/parseTripPlan"
 import { downloadText } from "../utils/downloadText"
+import { useAuth } from "../context/AuthContext"
+import API from "../services/api"
 
 function Result() {
   const navigate = useNavigate()
   const location = useLocation()
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [expandedDays, setExpandedDays] = useState({});
+  const { isAuthenticated } = useAuth()
 
   const locState = location.state || (typeof window !== 'undefined' && window.__INJECTED_TRIP__) || (typeof window !== 'undefined' && window.localStorage && (() => { try { return JSON.parse(window.localStorage.getItem('injectedTrip') || 'null') } catch { return null } })()) || {};
   const { formData, tripPlan } = locState || {};
@@ -210,6 +215,26 @@ function Result() {
             >
               <Download className="w-4 h-4" /> Download
             </button>
+            {isAuthenticated && (
+              <button
+                onClick={async () => {
+                  if (saved) return
+                  setSaving(true)
+                  try {
+                    await API.post("/trip/save", { formData, tripPlan })
+                    setSaved(true)
+                  } catch (error) {
+                    alert(error?.response?.data?.message || "Unable to save trip.")
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
+                disabled={saving || saved}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 ring-1 ring-white/15 hover:bg-white/15 transition text-sm font-semibold"
+              >
+                <BookmarkPlus className="w-4 h-4" /> {saved ? "Saved" : saving ? "Saving..." : "Save trip"}
+              </button>
+            )}
           </div>
         </motion.div>
 

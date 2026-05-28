@@ -5,6 +5,27 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 
+async function generateUsername(name, email) {
+  const base = String(name || email.split('@')[0] || 'user')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 20) || 'user'
+
+  let candidate = base
+  let attempt = 0
+  while (await User.findOne({ username: candidate })) {
+    attempt += 1
+    candidate = `${base}${Math.floor(Math.random() * 9000) + 1000}`
+    if (attempt > 10) {
+      candidate = `${base}${Date.now()}`
+      break
+    }
+  }
+
+  return candidate
+}
+
 const router = express.Router();
 
 function signToken({ user }) {
@@ -26,7 +47,8 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ message: 'Email already registered' });
     }
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email: String(email).toLowerCase(), passwordHash });
+    const username = await generateUsername(name, email);
+    const user = await User.create({ name, username, email: String(email).toLowerCase(), passwordHash });
     const token = signToken({ user });
     return res.status(201).json({ token, user: { id: user._id.toString(), name: user.name, email: user.email } });
   } catch (e) {

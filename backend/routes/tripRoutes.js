@@ -1,5 +1,8 @@
 const express = require("express")
-const { OpenAI } = require("openai");
+const { OpenAI } = require("openai")
+
+const { requireAuth } = require('../middleware/auth');
+const SavedTrip = require('../models/SavedTrip');
 
 const router = express.Router()
 
