@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { ArrowLeft, Trash2, Bookmark } from "lucide-react"
+import { ArrowLeft, Trash2, Bookmark, Download } from "lucide-react"
 
 import Navbar from "../components/Navbar"
 import GlassCard from "../components/ui/GlassCard"
 import API from "../services/api"
 import { useAuth } from "../context/AuthContext"
+import { downloadText } from "../utils/downloadText"
 
 function MyTrips() {
   const navigate = useNavigate()
@@ -44,6 +45,18 @@ function MyTrips() {
     } catch (err) {
       alert(err?.response?.data?.message || "Unable to delete trip.")
     }
+  }
+
+  const getTripText = (trip) => {
+    if (!trip?.tripPlan) return ""
+    if (typeof trip.tripPlan === "string") return trip.tripPlan
+    return trip.tripPlan.raw || JSON.stringify(trip.tripPlan, null, 2)
+  }
+
+  const handleDownload = (trip) => {
+    const fileName = `${trip.destination || "trip"}-${new Date(trip.createdAt).toISOString().slice(0, 10)}.txt`
+    const text = getTripText(trip)
+    downloadText(fileName, text)
   }
 
   const handleView = (trip) => {
@@ -105,6 +118,12 @@ function MyTrips() {
                       className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15 transition"
                     >
                       View itinerary
+                    </button>
+                    <button
+                      onClick={() => handleDownload(trip)}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-yellow-400 px-4 py-3 text-sm font-semibold text-black hover:bg-yellow-300 transition"
+                    >
+                      <Download className="w-4 h-4" /> Download
                     </button>
                     <button
                       onClick={() => handleDelete(trip._id)}
