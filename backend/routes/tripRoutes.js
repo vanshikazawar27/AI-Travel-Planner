@@ -189,4 +189,59 @@ Day 3: <short day summary and food + hotel recommendations>
 
 })
 
+router.post("/save", requireAuth, async (req, res) => {
+  try {
+    const { formData, tripPlan } = req.body || {}
+    console.log('SAVE TRIP request', {
+      userId: req.user?.userId,
+      formData: formData ? { destination: formData.destination, budget: formData.budget, days: formData.days, interest: formData.interest } : null,
+      tripPlanType: typeof tripPlan,
+      tripPlanKeys: tripPlan ? Object.keys(tripPlan) : null,
+    })
+
+    if (!formData || !tripPlan) {
+      return res.status(400).json({ message: "formData and tripPlan are required" })
+    }
+
+    const savedTrip = await SavedTrip.create({
+      userId: req.user.userId,
+      destination: formData.destination,
+      budget: Number(formData.budget) || 0,
+      days: Number(formData.days) || 0,
+      interest: formData.interest,
+      formData,
+      tripPlan,
+    })
+
+    res.status(201).json({ savedTrip })
+  } catch (error) {
+    console.log('SAVE TRIP error', error)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+router.get("/saved", requireAuth, async (req, res) => {
+  try {
+    const savedTrips = await SavedTrip.find({ userId: req.user.userId }).sort({ createdAt: -1 })
+    res.json(savedTrips)
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+router.delete("/saved/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const deleted = await SavedTrip.findOneAndDelete({ _id: id, userId: req.user.userId })
+    if (!deleted) {
+      return res.status(404).json({ message: "Saved trip not found" })
+    }
+    res.json({ deleted: true })
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ message: error.message })
+  }
+})
+
 module.exports = router

@@ -224,7 +224,12 @@ function Result() {
                     await API.post("/trip/save", { formData, tripPlan })
                     setSaved(true)
                   } catch (error) {
-                    alert(error?.response?.data?.message || "Unable to save trip.")
+                    console.error("Save trip failed", error)
+                    const message =
+                      error?.response?.data?.message ||
+                      error?.message ||
+                      "Unable to save trip."
+                    alert(message)
                   } finally {
                     setSaving(false)
                   }
