@@ -9,6 +9,8 @@ const SavedTripSchema = new mongoose.Schema(
     interest: { type: String, required: true, trim: true },
     formData: { type: Object, required: true },
     tripPlan: { type: Object, required: true },
+    tags: [{ type: String }],
+    favorite: { type: Boolean, default: false },
   },
   { timestamps: true }
 )

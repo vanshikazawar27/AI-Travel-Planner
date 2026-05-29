@@ -5,6 +5,7 @@ import { ArrowLeft, Download, Copy, Check, Bed, ForkKnife, DollarSign, MapPin, I
 
 import Navbar from "../components/Navbar"
 import GlassCard from "../components/ui/GlassCard"
+import Toast from "../components/ui/Toast"
 import { parseTripPlan } from "../utils/parseTripPlan"
 import { downloadText } from "../utils/downloadText"
 import { useAuth } from "../context/AuthContext"
@@ -16,8 +17,18 @@ function Result() {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
   const [expandedDays, setExpandedDays] = useState({});
+  const [savedTripId, setSavedTripId] = useState(null);
   const { isAuthenticated } = useAuth()
+
+  const showToast = (message, type = "success") => {
+    setToast({ visible: true, message, type })
+    window.clearTimeout(showToast.timeout)
+    showToast.timeout = window.setTimeout(() => {
+      setToast((current) => ({ ...current, visible: false }))
+    }, 2500)
+  }
 
   const locState = location.state || (typeof window !== 'undefined' && window.__INJECTED_TRIP__) || (typeof window !== 'undefined' && window.localStorage && (() => { try { return JSON.parse(window.localStorage.getItem('injectedTrip') || 'null') } catch { return null } })()) || {};
   const { formData, tripPlan } = locState || {};
@@ -144,8 +155,9 @@ function Result() {
       await navigator.clipboard.writeText(itineraryText)
       setCopied(true)
       setTimeout(() => setCopied(false), 1200)
+      showToast("Itinerary copied to clipboard.", "success")
     } catch {
-      alert("Copy failed")
+      showToast("Copy failed.", "error")
     }
   }
 
@@ -192,6 +204,12 @@ function Result() {
             </p>
           </div>
 
+          <Toast
+            visible={toast.visible}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast((current) => ({ ...current, visible: false }))}
+          />
           <div className="flex gap-3">
             <button
               onClick={handleCopy}
@@ -215,23 +233,65 @@ function Result() {
             >
               <Download className="w-4 h-4" /> Download
             </button>
+            {saved && savedTripId && (
+              <>
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await API.get(`/trip/saved/${savedTripId}?format=pdf`, { responseType: "blob" });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.setAttribute("download", `${formData.destination || "trip"}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                    } catch (err) {
+                      console.error(err);
+                      showToast("Failed to download PDF", "error");
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-800 text-white hover:bg-gray-700 transition text-sm font-semibold"
+                >
+                  PDF
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await API.post("/trip/share", { savedTripId });
+                      const link = response.data.url;
+                      await navigator.clipboard.writeText(link);
+                      showToast("Share link copied!", "success");
+                    } catch (err) {
+                      console.error(err);
+                      showToast("Failed to generate share link", "error");
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition text-sm font-semibold"
+                >
+                  Share
+                </button>
+              </>
+            )}
             {isAuthenticated && (
               <button
                 onClick={async () => {
-                  if (saved) return
-                  setSaving(true)
+                  if (saved) return;
+                  setSaving(true);
                   try {
-                    await API.post("/trip/save", { formData, tripPlan })
-                    setSaved(true)
+                    const resp = await API.post("/trip/save", { formData, tripPlan });
+                    if (resp.data?.savedTripId) setSavedTripId(resp.data.savedTripId);
+                    setSaved(true);
+                    showToast("Trip saved successfully.", "success");
                   } catch (error) {
-                    console.error("Save trip failed", error)
+                    console.error("Save trip failed", error);
                     const message =
                       error?.response?.data?.message ||
                       error?.message ||
-                      "Unable to save trip."
-                    alert(message)
+                      "Unable to save trip.";
+                    showToast(message, "error");
                   } finally {
-                    setSaving(false)
+                    setSaving(false);
                   }
                 }}
                 disabled={saving || saved}
