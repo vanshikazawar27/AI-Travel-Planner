@@ -7,8 +7,10 @@ import Login from "./pages/Login"
 import Register from "./pages/Register"
 import MyTrips from "./pages/MyTrips"
 import NotFound from "./pages/NotFound"
+import ShareTrip from "./pages/ShareTrip"
 import ProtectedRoute from "./components/ProtectedRoute"
 import { AuthProvider } from "./context/AuthContext"
+
 
 function App() {
   return (
@@ -20,7 +22,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
+        <Route path="/share/:token" element={<ShareTrip />} />
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </AuthProvider>
   )
