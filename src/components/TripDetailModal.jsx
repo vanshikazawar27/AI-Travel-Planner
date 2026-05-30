@@ -79,7 +79,7 @@ function TripDetailModal({ isOpen, onClose, trip }) {
 
   const shareTrip = async () => {
     try {
-      const res = await API.post("/share", { savedTripId: _id });
+      const res = await API.post("/trip/share", { savedTripId: _id });
       const { url } = res.data;
       await navigator.clipboard.writeText(url);
       showToast("Share link copied to clipboard", "success");

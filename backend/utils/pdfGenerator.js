@@ -1,5 +1,4 @@
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
-const fs = require('fs');
 
 /**
  * Generates a PDF buffer containing the itinerary details of a saved trip.
@@ -7,49 +6,70 @@ const fs = require('fs');
  * @returns {Promise<Buffer>} - PDF data as a Buffer suitable for sending in an HTTP response.
  */
 async function generateTripPDF(savedTrip) {
-  // Create a new PDF document
+  console.log('[pdfGenerator] generateTripPDF called', {
+    destination: savedTrip?.destination,
+    budget: savedTrip?.budget,
+    days: savedTrip?.days,
+    hasTripPlan: !!savedTrip?.tripPlan,
+    tripPlanType: typeof savedTrip?.tripPlan,
+  });
+
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage();
-  const { width, height } = page.getSize();
+  const { height } = page.getSize();
 
-  // Load fonts
+  // WinAnsi standard fonts can't encode some Unicode (like ₹). We sanitize all text we draw.
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const margin = 50;
   let y = height - margin;
-
   const lineHeight = 20;
+
+  const safeText = (val) => {
+    const str = String(val ?? '');
+    return str
+      .replace(/₹/g, 'INR')
+      .replace(/[\u0000-\u001f]/g, '');
+  };
+
   const drawText = (text, opts = {}) => {
     const { size = 12, color = rgb(0, 0, 0), fontRef = font } = opts;
-    page.drawText(text, {
+
+    page.drawText(safeText(text), {
       x: margin,
       y,
       size,
       font: fontRef,
       color,
     });
+
     y -= lineHeight;
   };
 
   // Header
-  drawText('Trip Itinerary', { size: 18, fontRef: fontBold, color: rgb(0.2, 0.4, 0.6) });
+  drawText('Trip Itinerary', {
+    size: 18,
+    fontRef: fontBold,
+    color: rgb(0.2, 0.4, 0.6),
+  });
   y -= 10;
 
   // Basic info
-  drawText(`Destination: ${savedTrip.destination || ''}`);
-  drawText(`Budget: $${savedTrip.budget || ''}`);
-  drawText(`Days: ${savedTrip.days || ''}`);
-  drawText(`Interests: ${savedTrip.interest || ''}`);
+  drawText(`Destination: ${savedTrip?.destination || ''}`);
+  drawText(`Budget: ${savedTrip?.budget ?? ''}`);
+  drawText(`Days: ${savedTrip?.days || ''}`);
+  drawText(`Interests: ${savedTrip?.interest || ''}`);
   y -= 10;
 
-  // If there is a structured tripPlan, render it nicely
-  if (savedTrip.tripPlan && typeof savedTrip.tripPlan === 'object') {
+  // Render tripPlan when it's a structured object
+  if (savedTrip?.tripPlan && typeof savedTrip.tripPlan === 'object') {
     drawText('Trip Plan:', { fontRef: fontBold });
+
     const plan = savedTrip.tripPlan;
-    // Assuming plan is an object where each key is a day number and value is an array of activities
     for (const dayKey of Object.keys(plan)) {
       drawText(`Day ${dayKey}:`, { fontRef: fontBold });
+
       const activities = plan[dayKey];
       if (Array.isArray(activities)) {
         for (const act of activities) {
@@ -77,3 +97,4 @@ async function generateTripPDF(savedTrip) {
 }
 
 module.exports = { generateTripPDF };
+

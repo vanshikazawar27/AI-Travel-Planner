@@ -28,7 +28,7 @@ app.use("/api/trip", tripRoutes);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/groups", groupRoutes);
-app.use("/api/groups", expenseRoutes);
+app.use("/api/expenses", expenseRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 const PORT = process.env.PORT || 5000;
