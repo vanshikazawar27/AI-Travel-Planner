@@ -576,8 +576,13 @@ router.get(
       if (req.query.format === "pdf") {
         console.log('[tripRoutes] PDF requested', { savedTripId: savedTrip?._id, destination: savedTrip?.destination, days: savedTrip?.days });
 
-        const pdfGenerator =
-          require("../utils/pdfGenerator");
+        console.log(
+  "PDF PATH:",
+  require.resolve("../utils/pdfGenerator")
+);
+
+const pdfGenerator =
+  require("../utils/pdfGenerator");
 
         const pdfBuffer =
           await pdfGenerator.generateTripPDF(

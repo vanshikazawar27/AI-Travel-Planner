@@ -1,12 +1,7 @@
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 
-/**
- * Generates a PDF buffer containing the itinerary details of a saved trip.
- * @param {Object} savedTrip - Mongoose document (or plain object) representing a saved trip.
- * @returns {Promise<Buffer>} - PDF data as a Buffer suitable for sending in an HTTP response.
- */
 async function generateTripPDF(savedTrip) {
-  console.log('[pdfGenerator] generateTripPDF called', {
+  console.log("[pdfGenerator] generateTripPDF called", {
     destination: savedTrip?.destination,
     budget: savedTrip?.budget,
     days: savedTrip?.days,
@@ -14,87 +9,133 @@ async function generateTripPDF(savedTrip) {
     tripPlanType: typeof savedTrip?.tripPlan,
   });
 
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage();
-  const { height } = page.getSize();
+  console.log(
+    "[pdfGenerator] FULL TRIP PLAN:",
+    JSON.stringify(savedTrip?.tripPlan, null, 2)
+  );
 
-  // WinAnsi standard fonts can't encode some Unicode (like ₹). We sanitize all text we draw.
+  const pdfDoc = await PDFDocument.create();
+
+  let page = pdfDoc.addPage();
+  let { height } = page.getSize();
+
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const bold = await pdfDoc.embedFont(
+    StandardFonts.HelveticaBold
+  );
 
   const margin = 50;
+  const lineHeight = 15;
+
   let y = height - margin;
-  const lineHeight = 20;
 
-  const safeText = (val) => {
-    const str = String(val ?? '');
-    return str
-      .replace(/₹/g, 'INR')
-      .replace(/[\u0000-\u001f]/g, '');
-  };
+  const safe = (text) =>
+    String(text || "")
+      .replace(/₹/g, "INR ")
+      .replace(/[\u0000-\u001f]/g, "");
 
-  const drawText = (text, opts = {}) => {
-    const { size = 12, color = rgb(0, 0, 0), fontRef = font } = opts;
+  const writeLine = (
+    text,
+    size = 11,
+    fontRef = font
+  ) => {
+    if (y < 50) {
+      page = pdfDoc.addPage();
+      height = page.getSize().height;
+      y = height - margin;
+    }
 
-    page.drawText(safeText(text), {
+    page.drawText(safe(text), {
       x: margin,
       y,
       size,
       font: fontRef,
-      color,
+      color: rgb(0, 0, 0),
     });
 
     y -= lineHeight;
   };
 
   // Header
-  drawText('Trip Itinerary', {
-    size: 18,
-    fontRef: fontBold,
-    color: rgb(0.2, 0.4, 0.6),
-  });
+  writeLine("AI Travel Planner", 20, bold);
   y -= 10;
 
-  // Basic info
-  drawText(`Destination: ${savedTrip?.destination || ''}`);
-  drawText(`Budget: ${savedTrip?.budget ?? ''}`);
-  drawText(`Days: ${savedTrip?.days || ''}`);
-  drawText(`Interests: ${savedTrip?.interest || ''}`);
-  y -= 10;
+  writeLine(
+    `Destination: ${savedTrip.destination}`
+  );
+  writeLine(`Budget: ${savedTrip.budget}`);
+  writeLine(`Days: ${savedTrip.days}`);
+  writeLine(
+    `Interest: ${savedTrip.interest}`
+  );
 
-  // Render tripPlan when it's a structured object
-  if (savedTrip?.tripPlan && typeof savedTrip.tripPlan === 'object') {
-    drawText('Trip Plan:', { fontRef: fontBold });
+  y -= 20;
 
-    const plan = savedTrip.tripPlan;
-    for (const dayKey of Object.keys(plan)) {
-      drawText(`Day ${dayKey}:`, { fontRef: fontBold });
+  writeLine("ITINERARY", 16, bold);
 
-      const activities = plan[dayKey];
-      if (Array.isArray(activities)) {
-        for (const act of activities) {
-          const line = typeof act === 'string' ? act : JSON.stringify(act);
-          drawText(`- ${line}`);
+  const tripPlan = savedTrip.tripPlan;
+
+  // CASE 1: itinerary array exists
+  if (
+    tripPlan &&
+    Array.isArray(tripPlan.itinerary)
+  ) {
+    for (const day of tripPlan.itinerary) {
+      y -= 10;
+
+      writeLine(
+        `Day ${day.day}`,
+        14,
+        bold
+      );
+
+      const content = String(
+        day.content || ""
+      );
+
+      const lines = content.split("\n");
+
+      for (const line of lines) {
+        if (line.trim()) {
+          writeLine(line);
         }
-      } else {
-        drawText(`- ${JSON.stringify(activities)}`);
+      }
+
+      if (day.metadata) {
+        writeLine(
+          `Notes: ${day.metadata}`
+        );
       }
     }
   }
 
-  // Footer timestamp
-  const now = new Date().toLocaleString();
-  page.drawText(`Generated on ${now}`, {
-    x: margin,
-    y: margin / 2,
-    size: 9,
-    font,
-    color: rgb(0.5, 0.5, 0.5),
-  });
+  // CASE 2: fallback
+  else {
+    const text = JSON.stringify(
+      tripPlan,
+      null,
+      2
+    );
+
+    const lines = text.split("\n");
+
+    for (const line of lines) {
+      writeLine(line);
+    }
+  }
+
+  y -= 20;
+
+  writeLine(
+    `Generated: ${new Date().toLocaleString()}`,
+    9
+  );
 
   const pdfBytes = await pdfDoc.save();
+
   return Buffer.from(pdfBytes);
 }
 
-module.exports = { generateTripPDF };
-
+module.exports = {
+  generateTripPDF,
+};
