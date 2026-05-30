@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { ArrowLeft, Download, Copy, Check, Bed, ForkKnife, DollarSign, MapPin, Info, BookmarkPlus } from "lucide-react"
+import { ArrowLeft, Copy, Check, Bed, ForkKnife, DollarSign, MapPin, Info, BookmarkPlus } from "lucide-react"
+
 
 import Navbar from "../components/Navbar"
 import GlassCard from "../components/ui/GlassCard"
@@ -222,17 +223,7 @@ function Result() {
               )}
               {copied ? "Copied" : "Copy"}
             </button>
-            <button
-              onClick={() =>
-                downloadText(
-                  `${formData.destination}-itinerary.txt`,
-                  itineraryText
-                )
-              }
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-yellow-400 text-black hover:bg-yellow-300 transition text-sm font-semibold"
-            >
-              <Download className="w-4 h-4" /> Download
-            </button>
+
             {saved && savedTripId && (
               <>
                 <button
