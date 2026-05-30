@@ -1,16 +1,46 @@
-# React + Vite
+🌍 AI Travel Planner
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI Travel Planner is a full-stack web application that helps users generate personalized travel itineraries using Artificial Intelligence. Users can enter their destination, budget, trip duration, and travel preferences, and the system creates a detailed day-wise travel plan with recommendations.
 
-Currently, two official plugins are available:
+🚀 Features
+AI-generated travel itineraries
+Personalized trip planning
+Day-wise activity suggestions
+Hotel recommendations
+Food recommendations
+Budget-based planning
+Travel tips and guidance
+Responsive and modern UI
+Real-time API integration
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+🛠️ Tech Stack
+Frontend:
+React.js
+React Router
+Axios
+Tailwind CSS
 
-## React Compiler
+Backend:
+Node.js
+Express.js
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+AI Integration:
+OpenRouter API
+LLM-powered itinerary generation
 
-## Expanding the ESLint configuration
+📌 How It Works
+User enters destination, budget, number of days, and travel style.
+Frontend sends data to the backend via REST API.
+Backend generates a prompt and sends it to the AI model.
+AI returns a customized itinerary.
+Frontend displays the generated travel plan
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+💡 Learning Outcomes
+Full-stack application development
+REST API design and integration
+AI/LLM integration
+State management in React
+Client-server architecture
+Modern UI development
+
+
