@@ -9,9 +9,11 @@ const authRoutes = require('./routes/authRoutes.js');
 const groupRoutes = require('./routes/groupRoutes.js');
 const expenseRoutes = require('./routes/expenseRoutes.js');
 const dashboardRoutes = require('./routes/dashboardRoutes.js');
+const mapRoutes = require('./routes/mapRoutes.js');
 
 // Log env variable for debugging
 console.log('MONGODB_URI from server:', process.env.MONGODB_URI);
+
 
 const app = express();
 
@@ -30,6 +32,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/map", mapRoutes);
 
 const PORT = process.env.PORT || 5000;
 

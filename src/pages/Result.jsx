@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
+
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { ArrowLeft, Copy, Check, Bed, ForkKnife, DollarSign, MapPin, Info, BookmarkPlus } from "lucide-react"
@@ -8,9 +9,12 @@ import Navbar from "../components/Navbar"
 import GlassCard from "../components/ui/GlassCard"
 import Toast from "../components/ui/Toast"
 import { parseTripPlan } from "../utils/parseTripPlan"
-import { downloadText } from "../utils/downloadText"
+
 import { useAuth } from "../context/AuthContext"
 import API from "../services/api"
+
+import DebugMapCandidates from "../components/DebugMapCandidates"
+import { extractLocationsFromDays, geocodeLocations } from "../utils/itineraryLocations"
 
 function Result() {
   const navigate = useNavigate()
@@ -21,7 +25,18 @@ function Result() {
   const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
   const [expandedDays, setExpandedDays] = useState({});
   const [savedTripId, setSavedTripId] = useState(null);
+
+  // Map state
+  const [mapLoading, setMapLoading] = useState(false);
+  const [mapError, setMapError] = useState("");
+  const [mapLocations, setMapLocations] = useState([]);
+
+
+
+
+
   const { isAuthenticated } = useAuth()
+
 
   const showToast = (message, type = "success") => {
     setToast({ visible: true, message, type })
@@ -36,6 +51,9 @@ function Result() {
 
   // Extract structured data if available
   const { itinerary = [], raw = '', destinationIntro: apiDestinationIntro = null, metadata: apiMetadata = '' } = tripPlan || {};
+
+
+
 
   const formatDayText = (text) => {
     const cleaned = (text ?? "")
@@ -79,8 +97,11 @@ function Result() {
   }
 
   // Determine days and raw itinerary text
+
   const { days, raw: parsedRaw, destinationIntro: parsedDestinationIntro = null, metadata: parsedMetadata = "" } = useMemo(() => {
+
     const parsedFromRaw = typeof raw === "string" ? parseTripPlan(raw) : { days: [], metadata: "", destinationIntro: null }
+
 
     if (parsedFromRaw.days.length > 0) {
       return {
@@ -101,13 +122,78 @@ function Result() {
     }
 
     return parseTripPlan(tripPlan);
-  }, [itinerary, tripPlan, raw, apiDestinationIntro]);
+  }, [itinerary, tripPlan, raw, apiDestinationIntro, apiMetadata]);
+
+
+
 
   const destinationIntro = apiDestinationIntro || parsedDestinationIntro;
   const itineraryText = parsedRaw || (typeof tripPlan === 'string' ? tripPlan : '');
   const metadata = parsedMetadata || apiMetadata || '';
 
+  // Build map markers
+
+  const computeMapLocations = async (daysToUse) => {
+    try {
+      setMapLoading(true)
+      setMapError("")
+
+      // Helpful diagnostics for geocoding failures
+      console.debug("[Map] extracting locations from days", daysToUse)
+
+
+
+
+      const candidates = extractLocationsFromDays(daysToUse, { maxPlaces: 15 })
+      if (!candidates.length) {
+        setMapLocations([])
+        return
+      }
+
+      const geocoded = await geocodeLocations(candidates, { maxToGeocode: 12, timeoutMs: 12000 })
+      if (!geocoded.length) {
+        setMapLocations([])
+        return
+      }
+
+      // Attach day index when possible by re-matching names against day content
+      const withDay = geocoded.map((loc) => {
+        let day = null
+        for (const d of daysToUse ?? []) {
+          const content = (d?.content ?? "").toString()
+          if (content.toLowerCase().includes(loc.name.toLowerCase())) {
+            day = d.day
+            break
+          }
+        }
+        return { ...loc, day }
+      })
+
+      setMapLocations(withDay)
+    } catch (e) {
+      console.error(e)
+      setMapError("Could not load map locations.")
+    } finally {
+      setMapLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!days || days.length === 0) return
+
+    const run = async () => {
+      await computeMapLocations(days)
+    }
+
+    run()
+  }, [days])
+
+
+
+
+
   const metadataSections = useMemo(() => {
+
     if (!metadata) return []
 
     const lines = metadata
@@ -366,10 +452,13 @@ function Result() {
           )}
           {days.length > 0 ? (
             <>
+
+
               {days.map((d, index) => {
                 const display = getDayDisplay(d)
                 return (
                   <motion.div
+
                     key={`day-${d.day}-${index}`}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
