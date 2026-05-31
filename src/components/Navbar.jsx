@@ -1,10 +1,12 @@
-import { Link, NavLink, useNavigate } from "react-router-dom"
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom"
 import { Compass, Sparkles, User, LogOut, Bookmark } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
+import { motion } from "framer-motion"
 
 function Navbar() {
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = () => {
     logout()
@@ -12,87 +14,66 @@ function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-black/40 backdrop-blur-md border-b border-white/10">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <Link to="/" className="group inline-flex items-center gap-3">
-          <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-white/10 ring-1 ring-white/15 overflow-hidden">
-            <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(170,59,255,0.8),transparent_55%)] opacity-80" />
-            <Sparkles className="relative w-5 h-5 text-yellow-300" />
-          </span>
-          <span className="text-white font-semibold tracking-wide">
-            <span className="inline-flex items-center gap-2 text-lg font-bold tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              AI Travel Planner
-            </span>
+    <nav className="fixed top-2 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl rounded-full glass-nav shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-white/10 px-2 py-2">
+      <div className="flex items-center justify-between px-2 sm:px-4">
+        {/* Logo */}
+        <Link to="/" className="group flex items-center gap-3">
+          <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-black/50 border border-white/10 overflow-hidden shadow-[0_0_15px_rgba(217,70,239,0.2)] group-hover:shadow-[0_0_20px_rgba(217,70,239,0.5)] transition-all duration-300">
+            <span className="absolute inset-0 bg-gradient-neon opacity-20 group-hover:opacity-40 transition-opacity" />
+            <Sparkles className="relative w-5 h-5 text-white" />
+          </div>
+          <span className="hidden sm:block text-white font-extrabold tracking-wide text-lg drop-shadow-md">
+            WanderGo
           </span>
         </Link>
 
-        <div className="flex items-center gap-3">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `px-3 py-2 rounded-xl text-sm font-medium transition border ring-1 ring-transparent ${
-                isActive
-                  ? "bg-white/10 border-white/15 text-white"
-                  : "text-white/70 hover:text-white hover:bg-white/5 border-white/0"
-              }`
-            }
-          >
-            Home
-          </NavLink>
-
-          <NavLink
-            to="/planner"
-            className={({ isActive }) =>
-              `px-3 py-2 rounded-xl text-sm font-medium transition border ring-1 ring-transparent ${
-                isActive
-                  ? "bg-white/10 border-white/15 text-white"
-                  : "text-white/70 hover:text-white hover:bg-white/5 border-white/0"
-              }`
-            }
-          >
-            <span className="inline-flex items-center gap-2">
-              <Compass className="w-4 h-4" /> Planner
-            </span>
-          </NavLink>
-
-          {isAuthenticated ? (
-            <>
+        {/* Nav Links */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {[
+            { to: "/", label: "Home", exact: true },
+            { to: "/planner", label: "Planner", icon: Compass },
+            ...(isAuthenticated ? [{ to: "/my-trips", label: "Trips", icon: Bookmark }] : [])
+          ].map((item) => {
+            const isActive = item.exact ? location.pathname === "/" : location.pathname.startsWith(item.to);
+            return (
               <NavLink
-                to="/my-trips"
-                className={({ isActive }) =>
-                  `px-3 py-2 rounded-xl text-sm font-medium transition border ring-1 ring-transparent ${
-                    isActive
-                      ? "bg-white/10 border-white/15 text-white"
-                      : "text-white/70 hover:text-white hover:bg-white/5 border-white/0"
-                  }`
-                }
+                key={item.to}
+                to={item.to}
+                className={`relative px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-300 ${
+                  isActive ? "text-white" : "text-white/60 hover:text-white"
+                }`}
               >
-                <span className="inline-flex items-center gap-2">
-                  <Bookmark className="w-4 h-4" /> Trips
+                {isActive && (
+                  <motion.div
+                    layoutId="navbar-indicator"
+                    className="absolute inset-0 bg-white/10 border border-white/20 rounded-full"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  {item.icon && <item.icon className="w-4 h-4" />}
+                  {item.label}
                 </span>
               </NavLink>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-white/70 transition hover:text-white hover:bg-white/10"
-              >
-                <LogOut className="w-4 h-4" /> Logout
-              </button>
-            </>
+            )
+          })}
+        </div>
+
+        {/* Auth Buttons */}
+        <div className="flex items-center">
+          {isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70 transition-all hover:text-white hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+            >
+              <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Logout</span>
+            </button>
           ) : (
             <NavLink
               to="/login"
-              className={({ isActive }) =>
-                `px-3 py-2 rounded-xl text-sm font-medium transition border ring-1 ring-transparent ${
-                  isActive
-                    ? "bg-white/10 border-white/15 text-white"
-                    : "text-white/70 hover:text-white hover:bg-white/5 border-white/0"
-                }`
-              }
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-neon px-5 py-2 text-sm font-bold text-white shadow-[0_0_20px_rgba(217,70,239,0.3)] hover:shadow-[0_0_30px_rgba(217,70,239,0.5)] transition-all duration-300 hover:scale-105"
             >
-              <span className="inline-flex items-center gap-2">
-                <User className="w-4 h-4" /> Login
-              </span>
+              <User className="w-4 h-4" /> <span className="hidden sm:inline">Login</span>
             </NavLink>
           )}
         </div>
