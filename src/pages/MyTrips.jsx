@@ -9,17 +9,17 @@ import Toast from "../components/ui/Toast"
 import API from "../services/api"
 import { useAuth } from "../context/AuthContext"
 import { downloadText } from "../utils/downloadText"
-import TripDetailModal from "../components/TripDetailModal"
+
 
 function MyTrips() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [trips, setTrips] = useState([])
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [toast, setToast] = useState({ visible: false, message: "", type: "success" })
-  const [selectedTrip, setSelectedTrip] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+
 
   const showToast = (message, type = "success") => {
     setToast({ visible: true, message, type })
@@ -34,8 +34,11 @@ function MyTrips() {
     setError("")
     try {
       const resp = await API.get("/trip/saved")
-      setTrips(resp.data)
+      const data = resp?.data
+      // API may return an object (e.g., { trips: [...] }); normalize to array
+      setTrips(Array.isArray(data) ? data : (data?.trips ?? []))
     } catch (err) {
+
       setError(err?.response?.data?.message || "Unable to load saved trips.")
     } finally {
       setLoading(false)
@@ -71,15 +74,7 @@ function MyTrips() {
     navigate("/result", { state: { formData: trip.formData, tripPlan: trip.tripPlan } })
   }
 
-  const handleDetails = (trip) => {
-    setSelectedTrip(trip)
-    setIsModalOpen(true)
-  }
 
-  const closeModal = () => {
-    setIsModalOpen(false)
-    setSelectedTrip(null)
-  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(1200px_600px_at_10%_0%,rgba(170,59,255,0.25),transparent_60%),radial-gradient(900px_500px_at_80%_10%,rgba(245,158,11,0.22),transparent_55%),linear-gradient(180deg,#0b0b10,#141427)] text-white">
@@ -119,8 +114,8 @@ function MyTrips() {
                     <p className="mt-2 text-white/70 text-sm">Budget ₹{trip.budget} · {trip.interest} trip</p>
                   </div>
                   <div className="mt-5 flex flex-wrap gap-2 sm:mt-0 sm:items-center">
-                    <button onClick={() => handleDetails(trip)} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 transition">Details</button>
                     <button onClick={() => handleView(trip)} className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15 transition">View itinerary</button>
+
                     <button onClick={() => handleDownload(trip)} className="inline-flex items-center gap-2 rounded-2xl bg-yellow-400 px-4 py-3 text-sm font-semibold text-black hover:bg-yellow-300 transition"><Download className="w-4 h-4" /> Download</button>
                     <button onClick={() => handleDelete(trip._id)} className="inline-flex items-center gap-2 rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-100 hover:bg-red-500/20 transition"><Trash2 className="w-4 h-4" /> Delete</button>
                   </div>
@@ -130,9 +125,7 @@ function MyTrips() {
           </div>
         )}
       </div>
-      {isModalOpen && selectedTrip && (
-        <TripDetailModal isOpen={isModalOpen} onClose={closeModal} trip={selectedTrip} />
-      )}
+
     </div>
   )
 }

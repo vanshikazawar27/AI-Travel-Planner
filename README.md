@@ -220,21 +220,13 @@ VITE_API_URL=https://your-backend.onrender.com
 
 ## 📸 Screenshots
 
-Add screenshots of:
-
-- Home Page
-- Planner Page
-- Generated Itinerary
-- Dashboard
-- Share Trip Feature
-
-Example:
 
 ```md
-![Home](screenshots/home.png)
-![Planner](screenshots/planner.png)
-![Result](screenshots/result.png)
-```
+![Home Page](./src/assets/home.png)
+![Home Page](./src/assets/home2.png)
+![Planner](./src/assets/planner.png)
+![Itenarary](./src/assets/itenarary.png)
+![Savetrips](./src/assets/savetrips.png)```
 
 ---
 
