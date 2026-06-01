@@ -221,12 +221,12 @@ VITE_API_URL=https://your-backend.onrender.com
 ## 📸 Screenshots
 
 
-```md
+
 ![Home Page](./src/assets/home.png)
 ![Home Page](./src/assets/home2.png)
 ![Planner](./src/assets/planner.png)
 ![Itenarary](./src/assets/itenarary.png)
-![Savetrips](./src/assets/savetrips.png)```
+![Savetrips](./src/assets/savetrips.png)
 
 ---
 
